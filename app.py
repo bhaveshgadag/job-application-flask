@@ -1,12 +1,19 @@
 from flask import Flask, render_template, request, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail, Message
 from os import getenv
 from datetime import datetime
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = getenv("FLASK_S_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = getenv("SQL_DB_URI")
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 465
+app.config["MAIL_USE_SSL"] = True
+app.config["MAIL_USERNAME"] = getenv("EMAIL")
+app.config["MAIL_PASSWORD"] = getenv("GMAIL_APP_PASSWORD")
 db = SQLAlchemy(app)
+mail = Mail(app)
 
 
 class Form(db.Model):
@@ -32,6 +39,22 @@ def index():
                     date=date_format, occupation=occupation)
         db.session.add(form)
         db.session.commit()
+
+        body = f"""
+        Received application mail\n
+        Details:\n
+        First name: {first_name}\n
+        Last name: {last_name}\n
+        Date: {date_format}\n
+        Occupation: {occupation}
+"""
+        message = Message(subject="New application form",
+                       sender=getenv("EMAIL"),
+                       recipients=[email],
+                       body=body
+                       )
+        mail.send(message=message)
+
         flash("User data submitted successfully.", "success")
 
     return render_template("index.html")
